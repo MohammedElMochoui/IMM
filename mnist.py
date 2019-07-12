@@ -227,22 +227,18 @@ def go(options):
                 res = m.sample()
                 res = res.clamp(0, 1)
 
-            np.fliplr(test_edge)
-
-            print(f"The shape of the image is {test_edge[0].squeeze().squeeze().shape}")
-
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(test_edge[i, :, :, :].cpu().squeeze(), cmap='gray')
+                ax.imshow(np.fliplr(test_edge[i, :, :, :]).cpu().squeeze()) #, cmap='gray'
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
                     ax = plt.subplot(4, 10, i + 11)
-                    ax.imshow(res[i, :, :, :].cpu().squeeze(), cmap='gray')
+                    ax.imshow(res[i, :, :, :].cpu().squeeze())
                     ptutil.clean(ax)
 
                 ax = plt.subplot(4, 10, i + 21)
-                ax.imshow(out[i, :1, :, :].data.cpu().squeeze(), cmap='gray')
+                ax.imshow(out[i, :1, :, :].data.cpu().squeeze())
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
