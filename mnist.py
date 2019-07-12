@@ -226,7 +226,7 @@ def go(options):
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(np.moveaxis(test_edge[i].cpu().numpy().squeeze(), 0, -1)) #, cmap='gray'
+                ax.imshow(np.moveaxis(test_edge[i].cpu().numpy(), 0, -1)) #, cmap='gray'
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
@@ -234,10 +234,10 @@ def go(options):
                     ax.imshow(res[i, :, :, :].cpu().squeeze())
                     ptutil.clean(ax)
             
-                print(f"reformed : {np.moveaxis(out[0].cpu().detach().numpy().squeeze(), 0, -1).shape}")
+                print(f"reformed : {np.moveaxis(out[0].cpu().detach().numpy(), 0, -1).shape}")
 
                 ax = plt.subplot(4, 10, i + 21)
-                ax.imshow(np.moveaxis(out[i].cpu().detach().numpy().squeeze(), 0, -1))
+                ax.imshow(np.moveaxis(out[i].cpu().detach().numpy(), 0, -1))
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
