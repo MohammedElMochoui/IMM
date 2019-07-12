@@ -147,10 +147,6 @@ def go(options):
             # get the inputs
             inputs, labels = data
 
-            print(f"Shape = {inputs.shape}")
-            np.transpose(inputs[1, :, :, :].cpu().detach().numpy(), (1, 2, 0))
-            print(f"Shape = {inputs.shape}")
-
             edge = inputs[:, :, :, :256]
             handbag = inputs[:, :, :, 256:]
 
@@ -236,7 +232,7 @@ def go(options):
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(test_edge[i, :, :, :].cpu().squeeze()) #, cmap='gray'
+                ax.imshow(np.transpose(test_edge[i, :, :, :].cpu().squeeze(), (0, 2, 3, 1)) #, cmap='gray'
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
