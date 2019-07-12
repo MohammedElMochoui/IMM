@@ -197,11 +197,11 @@ def go(options):
             torch.save(edge_encoder.state_dict(), './edge_encoder_vae.pt')
             torch.save(edge_decoder.state_dict(), './edge_decoder_vae.pt')
 
-            print("Model saved!")
-
         ## Plot some reconstructions
         if epoch % options.out_every == 0:
-                
+
+            print("Model saved!")
+    
             print('({}) Plotting reconstructions.'.format(epoch))
 
             plt.figure(figsize=(10, 4))
