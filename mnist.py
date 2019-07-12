@@ -227,6 +227,8 @@ def go(options):
                 res = m.sample()
                 res = res.clamp(0, 1)
 
+            print(f"The shape is: {test_edge.cpu().squeeze().squeeze().shape}")
+
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
                 ax.imshow(test_edge[i, :, :, :].cpu().squeeze().squeeze()) #, cmap='gray'
