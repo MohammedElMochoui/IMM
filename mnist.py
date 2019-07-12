@@ -148,7 +148,7 @@ def go(options):
             inputs, labels = data
 
             print(f"Shape = {inputs.shape}")
-            np.transpose(inputs.cpu().detach().numpy(), (1, 2, 0))
+            np.transpose(inputs[1, :, :, :].cpu().detach().numpy(), (1, 2, 0))
             print(f"Shape = {inputs.shape}")
 
             edge = inputs[:, :, :, :256]
