@@ -157,7 +157,7 @@ def go(options):
                 edge, handbag = edge.cuda(), handbag.cuda()
 
             # wrap them in Variables
-            edge, handbag = Variable(edge), Variable(labels)
+            edge, handbag = Variable(edge), Variable(handbag)
 
             optimizer.zero_grad()
 
