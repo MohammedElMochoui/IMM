@@ -176,7 +176,7 @@ def go(options):
             zsample_handbag = ptutil.sample(zmean_handbag, zlsig_handbag)
 
             out = edge_decoder(zsample)
-            out = handbag_decoder(zsample_handbag)
+            out_handbag = handbag_decoder(zsample_handbag)
 
             if options.loss == 'xent':
                 rec_loss = binary_cross_entropy(out, edge, reduce=False).view(b, -1).sum(dim=1) + \
