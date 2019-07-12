@@ -197,14 +197,11 @@ def go(options):
             torch.save(edge_encoder.state_dict(), './edge_encoder_vae.pt')
             torch.save(edge_decoder.state_dict(), './edge_decoder_vae.pt')
 
+            print("Model saved!")
+
         ## Plot some reconstructions
         if epoch % options.out_every == 0:
                 
-            print(f"\nkl: {kl_loss.mean()}")
-            print(f"rec_loss: {rec_loss.mean()}")
-            print(f"loss: {loss}")
-            print(f"bits: {loss / 784}\n")
-
             print('({}) Plotting reconstructions.'.format(epoch))
 
             plt.figure(figsize=(10, 4))
@@ -238,7 +235,7 @@ def go(options):
                     ptutil.clean(ax)
 
                 ax = plt.subplot(4, 10, i + 21)
-                ax.imshow(out[i, :1, :, :].data.cpu().squeeze())
+                ax.imshow(np.moveaxis(out[i][:, :, :].cpu().numpy().squeeze(), 0, -1))
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
