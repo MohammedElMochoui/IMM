@@ -237,7 +237,7 @@ def go(options):
                 print(f"reformed : {np.moveaxis(out[0].cpu().detach().numpy().squeeze(), 0, -1).shape}")
 
                 ax = plt.subplot(4, 10, i + 21)
-                ax.imshow(np.moveaxis(out[i].cpu().detach().numpy().squeeze(), 0, -1).shape)
+                ax.imshow(np.moveaxis(out[i].cpu().detach().numpy().squeeze(), 0, -1))
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
