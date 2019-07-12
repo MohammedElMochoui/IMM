@@ -133,7 +133,7 @@ def go(options):
         handbag_encoder.cuda()
         handbag_decoder.cuda()
 
-    params = list(edge_encoder.parameters()) + list(edge_decoder.parameters() + handbag_encoder.parameters() + list(handbag_decoder.parameters())
+    params = list(edge_encoder.parameters()) + list(edge_decoder.parameters()) + list(handbag_encoder.parameters()) + list(handbag_decoder.parameters())
 
     ### Fit model
     instances_seen = 0
