@@ -103,36 +103,37 @@ def go(options):
     )
 
     # - channel sizes
-    handbag_a, handbag_b, handbag_c = 8, 32, 128
 
     handbag_encoder = Sequential(
-        Conv2d(1, handbag_a, (3, 3), padding=1), ReLU(),
+        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
-        Conv2d(handbag_a, handbag_b, (3, 3), padding=1), ReLU(),
+        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
-        Conv2d(handbag_b, handbag_c, (3, 3), padding=1), ReLU(),
+        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         ptutil.Flatten(),
-        Linear(3 * 3 * handbag_c, 2 * options.latent_size)
+        Linear((h // 8) * (w // 8) * edge_c, 2 * options.latent_size)
     )
 
     upmode = 'bilinear'
     handbag_decoder = Sequential(
-        Linear(options.latent_size, handbag_c * 3 * 3), ReLU(),
-        ptutil.Reshape((handbag_c, 3, 3)),
+        Linear(options.latent_size, edge_c * (h // 8) * (w // 8)), ReLU(),
+        ptutil.Reshape((edge_c, 32, 32)),
         Upsample(scale_factor=2, mode=upmode),
-        ConvTranspose2d(handbag_c, handbag_b, (3, 3), padding=1), ReLU(),
+        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
         Upsample(scale_factor=2, mode=upmode),
-        ConvTranspose2d(handbag_b, handbag_a, (3, 3), padding=0), ReLU(), # note the padding
+        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(), # note the padding
         Upsample(scale_factor=2, mode=upmode),
-        ConvTranspose2d(handbag_a, outc, (3, 3), padding=1), act
+        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), act
     )
 
     if torch.cuda.is_available():
         edge_encoder.cuda()
         edge_decoder.cuda()
+        handbag_encoder.cuda()
+        handbag_decoder.cuda()
 
-    params = list(edge_encoder.parameters()) + list(edge_decoder.parameters())
+    params = list(edge_encoder.parameters()) + list(edge_decoder.parameters() + handbag_encoder.parameters()) + list(handbag_decoder.parameters())
 
     ### Fit model
     instances_seen = 0
@@ -145,7 +146,7 @@ def go(options):
             #     break
 
             # get the inputs
-            inputs, labels = data
+            inputs, _ = data
 
             edge = inputs[:, :, :, :256]
             handbag = inputs[:, :, :, 256:]
@@ -153,10 +154,10 @@ def go(options):
             b, c, w, h = edge.size()
 
             if torch.cuda.is_available():
-                edge, labels = edge.cuda(), labels.cuda()
+                edge, handbag = edge.cuda(), handbag.cuda()
 
             # wrap them in Variables
-            edge, labels = Variable(edge), Variable(labels)
+            edge, handbag = Variable(edge), Variable(labels)
 
             optimizer.zero_grad()
 
@@ -165,24 +166,28 @@ def go(options):
             zcomb = edge_encoder(edge)
             zmean, zlsig = zcomb[:, :options.latent_size], zcomb[:, options.latent_size:]
 
+            zcomb_handbag = handbag_encoder(handbag)
+            zmean_handbag, zlsig_handbag = zcomb_handbag[:, :options.latent_size], zcomb_handbag[:, options.latent_size:]
+
             kl_loss = ptutil.kl_loss(zmean, zlsig)
+            kl_loss_handbag = ptutil.kl_loss(zmean_handbag, zlsig_handbag)
+
             zsample = ptutil.sample(zmean, zlsig)
+            zsample_handbag = ptutil.sample(zmean_handbag, zlsig_handbag)
 
             out = edge_decoder(zsample)
+            out = handbag_decoder(zsample_handbag)
 
-            if options.loss == 'gaussian':
-                m = dist.Normal(out[:, :1, :, :], out[:, 1:, :, :] + 0.0001)
-                rec_loss = - m.log_prob(inputs).view(b, -1).sum(dim=1)
-            elif options.loss == 'beta':
-                m = dist.Beta(out[:, :1, :, :] + 2, out[:, 1:, :, :] + 2)
-                rec_loss = - m.log_prob(inputs * (1 - 2 * EPS) + EPS).view(b, -1).sum(dim=1)
-            elif options.loss == 'xent':
-                rec_loss = binary_cross_entropy(out, edge, reduce=False).view(b, -1).sum(dim=1)
+            if options.loss == 'xent':
+                rec_loss = binary_cross_entropy(out, edge, reduce=False).view(b, -1).sum(dim=1) +
+                binary_cross_entropy(out_handbag, handbag, reduce=False).view(b, -1).sum(dim=1) + 
+                binary_cross_entropy(out, handbag, reduce=False).view(b, -1).sum(dim=1) + 
+                binary_cross_entropy(out_handbag, edge, reduce=False).view(b, -1).sum(dim=1) 
             else:
                 raise Exception('loss {} not recognized'.format(options.loss))
 
             # Backward pass
-            loss = (rec_loss + options.beta * kl_loss).mean()
+            loss = (rec_loss + options.beta * kl_loss + options.beta * kl_loss_handbag).mean()
             loss.backward()
 
             optimizer.step()
@@ -196,6 +201,9 @@ def go(options):
             
             torch.save(edge_encoder.state_dict(), './edge_encoder_vae.pt')
             torch.save(edge_decoder.state_dict(), './edge_decoder_vae.pt')
+            torch.save(handbag_encoder.state_dict(), './handbag_encoder_vae.pt')
+            torch.save(handbag_decoder.state_dict(), './handbag_decoder_vae.pt')
+
 
         ## Plot some reconstructions
         if epoch % options.out_every == 0:
@@ -209,39 +217,33 @@ def go(options):
             test_edge, test_handbag = test_batch[:, :, :, :256], test_batch[:, :, :, 256:]
 
             zc = edge_encoder(test_edge)
+            zc_handbag = handbag_encoder(test_handbag)
+
             zmean, zlsig = zc[:, :options.latent_size], zc[:, options.latent_size:]
+            zmean_handbag, zlsig_handbag = zc_handbag[:, :options.latent_size], zc_handbag[:, options.latent_size:]
+
             zsample = ptutil.sample(zmean, zlsig)
+            zsample_handbag = ptutil.sample(zmean_handbag, zlsig_handbag)
 
             out = edge_decoder(zsample)
-
-            if options.loss == 'gaussian':
-                m = dist.Normal(out[:, :1, :, :], out[:, 1:, :, :] + 0.0001)
-                res = m.sample()
-                res = res.clamp(0, 1)
-
-            if options.loss == 'beta':
-                m = dist.Beta(out[:, :1, :, :] + 2, out[:, 1:, :, :] + 2)
-                res = m.sample()
-                res = res.clamp(0, 1)
+            out_handbag = handbag_decoder(zsample_handbag)
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
                 ax.imshow(np.moveaxis(test_edge[i].cpu().numpy(), 0, -1)) #, cmap='gray'
                 ptutil.clean(ax)
 
-                if options.loss != 'xent':
-                    ax = plt.subplot(4, 10, i + 11)
-                    ax.imshow(res[i, :, :, :].cpu().squeeze())
-                    ptutil.clean(ax)
-            
-                ax = plt.subplot(4, 10, i + 21)
+                ax = plt.subplot(4, 10, i + 11)
                 ax.imshow(np.moveaxis(out[i].cpu().detach().numpy(), 0, -1))
                 ptutil.clean(ax)
+                            
+                ax = plt.subplot(4, 10, i + 21)
+                ax.imshow(np.moveaxis(test_handbag[i].cpu().numpy(), 0, -1)) #, cmap='gray'
+                ptutil.clean(ax)
 
-                if options.loss != 'xent':
-                    ax = plt.subplot(4, 10, i + 31)
-                    ax.imshow(out[i, 1:, :, :].data.cpu().squeeze(), cmap='gray')
-                    ptutil.clean(ax)
+                ax = plt.subplot(4, 10, i + 31)
+                ax.imshow(np.moveaxis(out_handbag[i].cpu().detach().numpy(), 0, -1))
+                ptutil.clean(ax)
 
             # plt.tight_layout()
             plt.savefig('plots/{}/rec.{:03}.pdf'.format(options.loss, epoch), dpi=300)
