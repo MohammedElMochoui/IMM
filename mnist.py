@@ -229,7 +229,7 @@ def go(options):
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(np.fliplr(test_edge[i, :, :, :]).cpu().squeeze()) #, cmap='gray'
+                ax.imshow(test_edge[i, :, :, :].cpu().squeeze()) #, cmap='gray'
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
