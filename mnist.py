@@ -150,7 +150,7 @@ def go(options):
             edge = inputs[:, :, :, :256]
             handbag = inputs[:, :, :, 256:]
 
-            np.moveaxis(edge, 1, -1)
+            np.moveaxis(edge.numpy(), 1, -1)
             print(f"Shape is {edge}")
 
             b, c, w, h = edge.size()
