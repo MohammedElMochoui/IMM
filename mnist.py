@@ -28,10 +28,15 @@ import matplotlib.pyplot as plt
 
 EPS = 0.00001
 
+torch.cuda.current_device()
+
+print(f"Torch cuda is: {torch.cuda.is_available()}")
+
 def go(options):
 
+    # os.system("some_command with args")
 
-    tbw = SummaryWriter(log_dir=options.tb_dir)
+    tbw = SummaryWriter(log_dir=f"{options.tb_dir}")
 
     # Set random or det. seed
     if options.seed < 0:
@@ -44,11 +49,15 @@ def go(options):
 
     # load data
 
+    data_dir_train = "Dataset/train1"
+    data_dir_test = "Dataset/test1"
+
     normalize = transforms.Compose([transforms.ToTensor()])
-    train = torchvision.datasets.MNIST(root='./mnist', train=True, download=True, transform=normalize)
+
+    train = torchvision.datasets.ImageFolder(root=data_dir_train, transform=normalize)
     trainloader = torch.utils.data.DataLoader(train, batch_size=options.batch_size, shuffle=True, num_workers=2)
 
-    test = torchvision.datasets.MNIST(root='./mnist', train=False, download=True, transform=normalize)
+    test = torchvision.datasets.ImageFolder(root=data_dir_test, transform=normalize)
     testloader = torch.utils.data.DataLoader(test, batch_size=options.batch_size, shuffle=False, num_workers=2)
 
     ## Load the complete test set into a listr of batches
@@ -63,52 +72,67 @@ def go(options):
     ## Build model
 
 
-    outc = 1 if options.loss == 'xent' else 2
+    outc = 3 if options.loss == 'xent' else 2
     act = Softplus() if options.loss == 'beta' else Sigmoid()
 
     # - channel sizes
-    a, b, c = 8, 32, 128
+    edge_a, edge_b, edge_c = 8, 32, 128
+    h, w = 256, 256
 
-    encoder = Sequential(
-        Conv2d(1, a, (3, 3), padding=1), ReLU(),
-        #Conv2d(a, a, (3, 3), padding=1), ReLU(),
-        #Conv2d(a, a, (3, 3), padding=1), ReLU(),
+    edge_encoder = Sequential(
+        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
-        Conv2d(a, b, (3, 3), padding=1), ReLU(),
-        #Conv2d(b, b, (3, 3), padding=1), ReLU(),
-        #Conv2d(b, b, (3, 3), padding=1), ReLU(),
+        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
-        Conv2d(b, c, (3, 3), padding=1), ReLU(),
-        #Conv2d(c, c, (3, 3), padding=1), ReLU(),
-        #Conv2d(c, c, (3, 3), padding=1), ReLU(),
+        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         ptutil.Flatten(),
-        Linear(3 * 3 * c, 2 * options.latent_size)
+        Linear((h // 8) * (w // 8) * edge_c, 2 * options.latent_size)
     )
 
     upmode = 'bilinear'
-    decoder = Sequential(
-        Linear(options.latent_size, c * 3 * 3), ReLU(),
-        ptutil.Reshape((c, 3, 3)),
+    edge_decoder = Sequential(
+        Linear(options.latent_size, edge_c * (h // 8) * (w // 8)), ReLU(),
+        ptutil.Reshape((edge_c, 32, 32)),
         Upsample(scale_factor=2, mode=upmode),
-        #ConvTranspose2d(c, c, (3, 3), padding=1), ReLU(),
-        #ConvTranspose2d(c, c, (3, 3), padding=1), ReLU(),
-        ConvTranspose2d(c, b, (3, 3), padding=1), ReLU(),
+        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
         Upsample(scale_factor=2, mode=upmode),
-        #ConvTranspose2d(b, b, (3, 3), padding=1), ReLU(),
-        #ConvTranspose2d(b, b, (3, 3), padding=1), ReLU(),
-        ConvTranspose2d(b, a, (3, 3), padding=0), ReLU(), # note the padding
+        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(), # note the padding
         Upsample(scale_factor=2, mode=upmode),
-        #ConvTranspose2d(a, a, (3, 3), padding=1), ReLU(),
-        #ConvTranspose2d(a, a, (3, 3), padding=1), ReLU(),
-        ConvTranspose2d(a, outc, (3, 3), padding=1), act
+        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), act
+    )
+
+    # - channel sizes
+    handbag_a, handbag_b, handbag_c = 8, 32, 128
+
+    handbag_encoder = Sequential(
+        Conv2d(1, handbag_a, (3, 3), padding=1), ReLU(),
+        MaxPool2d((2, 2)),
+        Conv2d(handbag_a, handbag_b, (3, 3), padding=1), ReLU(),
+        MaxPool2d((2, 2)),
+        Conv2d(handbag_b, handbag_c, (3, 3), padding=1), ReLU(),
+        MaxPool2d((2, 2)),
+        ptutil.Flatten(),
+        Linear(3 * 3 * handbag_c, 2 * options.latent_size)
+    )
+
+    upmode = 'bilinear'
+    handbag_decoder = Sequential(
+        Linear(options.latent_size, handbag_c * 3 * 3), ReLU(),
+        ptutil.Reshape((handbag_c, 3, 3)),
+        Upsample(scale_factor=2, mode=upmode),
+        ConvTranspose2d(handbag_c, handbag_b, (3, 3), padding=1), ReLU(),
+        Upsample(scale_factor=2, mode=upmode),
+        ConvTranspose2d(handbag_b, handbag_a, (3, 3), padding=0), ReLU(), # note the padding
+        Upsample(scale_factor=2, mode=upmode),
+        ConvTranspose2d(handbag_a, outc, (3, 3), padding=1), act
     )
 
     if torch.cuda.is_available():
-        encoder.cuda()
-        decoder.cuda()
+        edge_encoder.cuda()
+        edge_decoder.cuda()
 
-    params = list(encoder.parameters()) + list(decoder.parameters())
+    params = list(edge_encoder.parameters()) + list(edge_decoder.parameters())
 
     ### Fit model
     instances_seen = 0
@@ -117,31 +141,34 @@ def go(options):
 
     for epoch in range(options.epochs):
         for i, data in tqdm.tqdm(enumerate(trainloader, 0)):
-            # if i > 5:
+            # if i > 1000:
             #     break
 
             # get the inputs
             inputs, labels = data
 
-            b, c, w, h = inputs.size()
+            edge = inputs[:, :, :, :256]
+            handbag = inputs[:, :, :, 256:]
+
+            b, c, w, h = edge.size()
 
             if torch.cuda.is_available():
-                inputs, labels = inputs.cuda(), labels.cuda()
+                edge, labels = edge.cuda(), labels.cuda()
 
             # wrap them in Variables
-            inputs, labels = Variable(inputs), Variable(labels)
+            edge, labels = Variable(edge), Variable(labels)
 
             optimizer.zero_grad()
 
             # Forward pass
 
-            zcomb = encoder(inputs)
+            zcomb = edge_encoder(edge)
             zmean, zlsig = zcomb[:, :options.latent_size], zcomb[:, options.latent_size:]
 
             kl_loss = ptutil.kl_loss(zmean, zlsig)
             zsample = ptutil.sample(zmean, zlsig)
 
-            out = decoder(zsample)
+            out = edge_decoder(zsample)
 
             if options.loss == 'gaussian':
                 m = dist.Normal(out[:, :1, :, :], out[:, 1:, :, :] + 0.0001)
@@ -150,7 +177,7 @@ def go(options):
                 m = dist.Beta(out[:, :1, :, :] + 2, out[:, 1:, :, :] + 2)
                 rec_loss = - m.log_prob(inputs * (1 - 2 * EPS) + EPS).view(b, -1).sum(dim=1)
             elif options.loss == 'xent':
-                rec_loss = binary_cross_entropy(out, inputs, reduce=False).view(b, -1).sum(dim=1)
+                rec_loss = binary_cross_entropy(out, edge, reduce=False).view(b, -1).sum(dim=1)
             else:
                 raise Exception('loss {} not recognized'.format(options.loss))
 
@@ -160,23 +187,35 @@ def go(options):
 
             optimizer.step()
 
-            instances_seen += inputs.size(0)
+            instances_seen += edge.size(0)
 
             tbw.add_scalar('score/kl', float(kl_loss.mean()), instances_seen)
             tbw.add_scalar('score/rec', float(rec_loss.mean()), instances_seen)
             tbw.add_scalar('score/loss', float(loss), instances_seen)
+            tbw.add_scalar('score/bits', float(loss / 784), instances_seen)
+            
+            torch.save(edge_encoder.state_dict(), './edge_encoder_vae.pt')
+            torch.save(edge_decoder.state_dict(), './edge_decoder_vae.pt')
 
         ## Plot some reconstructions
         if epoch % options.out_every == 0:
+                
+            print(f"\nkl: {kl_loss.mean()}")
+            print(f"rec_loss: {rec_loss.mean()}")
+            print(f"loss: {loss}")
+            print(f"bits: {loss / 784}\n")
+
             print('({}) Plotting reconstructions.'.format(epoch))
 
             plt.figure(figsize=(10, 4))
 
-            zc = encoder(test_batch)
+            test_edge, test_handbag = test_batch[:, :, :, :256], test_batch[:, :, :, 256:]
+
+            zc = edge_encoder(test_edge)
             zmean, zlsig = zc[:, :options.latent_size], zc[:, options.latent_size:]
             zsample = ptutil.sample(zmean, zlsig)
 
-            out = decoder(zsample)
+            out = edge_decoder(zsample)
 
             if options.loss == 'gaussian':
                 m = dist.Normal(out[:, :1, :, :], out[:, 1:, :, :] + 0.0001)
@@ -188,9 +227,11 @@ def go(options):
                 res = m.sample()
                 res = res.clamp(0, 1)
 
+            print(f"The shape of the image is {test_batch[0].shape}")
+
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(test_batch[i, :, :, :].cpu().squeeze(), cmap='gray')
+                ax.imshow(test_edge[i, :, :, :].cpu().squeeze(), cmap='gray')
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
@@ -208,7 +249,14 @@ def go(options):
                     ptutil.clean(ax)
 
             # plt.tight_layout()
-            plt.savefig('rec.{:03}.pdf'.format(epoch))
+            plt.savefig('plots/{}/rec.{:03}.pdf'.format(options.loss, epoch))
+
+            # Clear the current axes.
+            plt.cla() 
+            # Clear the current figure.
+            plt.clf() 
+            # Closes all the figure windows.
+            plt.close('all')
 
 if __name__ == "__main__":
 
@@ -218,7 +266,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epochs",
                         dest="epochs",
                         help="Number of epochs.",
-                        default=20, type=int)
+                        default=100, type=int)
 
     parser.add_argument("-o", "--out-every",
                         dest="out_every",
@@ -228,7 +276,7 @@ if __name__ == "__main__":
     parser.add_argument("-L", "--latent-size",
                         dest="latent_size",
                         help="Size of the latent representation",
-                        default=2, type=int)
+                        default=256, type=int)
 
     parser.add_argument("-l", "--learn-rate",
                         dest="lr",
@@ -238,12 +286,12 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--batch-size",
                         dest="batch_size",
                         help="Batch size",
-                        default=32, type=int)
+                        default=128, type=int)
 
     parser.add_argument("--loss",
                         dest="loss",
                         help="Type of loss (gaussian or xent)",
-                        default='gaussian', type=str)
+                        default='xent', type=str)
 
     parser.add_argument("-B", "--beta",
                         dest="beta",
@@ -253,7 +301,7 @@ if __name__ == "__main__":
     parser.add_argument("-T", "--tb-directory",
                         dest="tb_dir",
                         help="Tensorboard directory",
-                        default='./runs/score/mnist', type=str)
+                        default="./logs", type=str)
 
     parser.add_argument("-r", "--random-seed",
                         dest="seed",
@@ -266,3 +314,4 @@ if __name__ == "__main__":
     print('OPTIONS', options)
 
     go(options)
+
