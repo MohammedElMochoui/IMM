@@ -235,7 +235,7 @@ def go(options):
                     ptutil.clean(ax)
 
                 ax = plt.subplot(4, 10, i + 21)
-                ax.imshow(out[i, :1, :, :].data.cpu().squeeze())
+                ax.imshow(np.moveaxis(out[i, :, :, :].data.cpu().numpy().squeeze(), 1, -1))
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
