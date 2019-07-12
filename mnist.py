@@ -234,8 +234,6 @@ def go(options):
                     ax.imshow(res[i, :, :, :].cpu().squeeze())
                     ptutil.clean(ax)
             
-                print(f"reformed : {np.moveaxis(out[0].cpu().detach().numpy(), 0, -1).shape}")
-
                 ax = plt.subplot(4, 10, i + 21)
                 ax.imshow(np.moveaxis(out[i].cpu().detach().numpy(), 0, -1))
                 ptutil.clean(ax)
@@ -246,7 +244,7 @@ def go(options):
                     ptutil.clean(ax)
 
             # plt.tight_layout()
-            plt.savefig('plots/{}/rec.{:03}.pdf'.format(options.loss, epoch))
+            plt.savefig('plots/{}/rec.{:03}.pdf'.format(options.loss, epoch), dpi=300)
 
             # Clear the current axes.
             plt.cla() 
@@ -263,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epochs",
                         dest="epochs",
                         help="Number of epochs.",
-                        default=100, type=int)
+                        default=50, type=int)
 
     parser.add_argument("-o", "--out-every",
                         dest="out_every",
