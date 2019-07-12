@@ -227,6 +227,8 @@ def go(options):
                 res = m.sample()
                 res = res.clamp(0, 1)
 
+            np.fliplr(test_edge)
+
             print(f"The shape of the image is {test_edge[0].squeeze().squeeze().shape}")
 
             for i in range(10):
