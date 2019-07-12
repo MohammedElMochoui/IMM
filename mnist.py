@@ -150,8 +150,6 @@ def go(options):
             edge = inputs[:, :, :, :256]
             handbag = inputs[:, :, :, 256:]
 
-            print(f"{np.moveaxis(edge[0][:, :, :].cpu().numpy().squeeze(), 0, -1).shape}")
-
             b, c, w, h = edge.size()
 
             if torch.cuda.is_available():
@@ -231,7 +229,7 @@ def go(options):
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
-                ax.imshow(np.moveaxis(test_edge[i][:, :, :].cpu().numpy().squeeze(), 1, -1)) #, cmap='gray'
+                ax.imshow(np.moveaxis(test_edge[i][:, :, :].cpu().numpy().squeeze(), 0, -1)) #, cmap='gray'
                 ptutil.clean(ax)
 
                 if options.loss != 'xent':
