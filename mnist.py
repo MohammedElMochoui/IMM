@@ -234,8 +234,8 @@ def go(options):
                     ax.imshow(res[i, :, :, :].cpu().squeeze())
                     ptutil.clean(ax)
             
-                print(out.shape)
-                print(f"reformed : {np.moveaxis(out[0][:, :, :].cpu().numpy().squeeze(), 0, -1)}")
+                print(out[0].shape)
+                print(f"reformed : {np.moveaxis(out[0][:, :, :].cpu().detach().numpy().squeeze(), 0, -1)}")
 
                 ax = plt.subplot(4, 10, i + 21)
                 ax.imshow(out[i, :, :, :].data.cpu().squeeze())
