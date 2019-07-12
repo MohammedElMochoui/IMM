@@ -227,7 +227,7 @@ def go(options):
                 res = m.sample()
                 res = res.clamp(0, 1)
 
-            print(f"The shape of the image is {test_edge[0].squeeze().shape}")
+            print(f"The shape of the image is {test_edge[0].squeeze().squeeze().shape}")
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
