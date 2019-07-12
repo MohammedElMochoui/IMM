@@ -228,6 +228,7 @@ def go(options):
                 res = res.clamp(0, 1)
 
             np.transpose(test_edge.cpu().detach().numpy(), (1, 2, 0))
+            print(f"Shape = {test_edge.shape}")
 
             for i in range(10):
                 ax = plt.subplot(4, 10, i + 1)
