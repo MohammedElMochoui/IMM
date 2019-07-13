@@ -81,16 +81,16 @@ def go(options):
 
     edge_encoder = Sequential(
         Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
-        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
-        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_a, edge_a, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_a, edge_a, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
-        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
-        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_b, edge_b, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_b, edge_b, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
-        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
-        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_c, edge_c, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_c, edge_c, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         ptutil.Flatten(),
         Linear((h // 8) * (w // 8) * edge_c, 2 * options.latent_size)
@@ -102,16 +102,16 @@ def go(options):
         ptutil.Reshape((edge_c, 32, 32)),
         Upsample(scale_factor=2, mode=upmode),
         ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_b, edge_b, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_b, edge_b, (5, 5), padding=2), ReLU(),
         Upsample(scale_factor=2, mode=upmode),
         ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(), 
+        ConvTranspose2d(edge_a, edge_a, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_a, edge_a, (5, 5), padding=2), ReLU(), 
         Upsample(scale_factor=2, mode=upmode),
         ConvTranspose2d(edge_a, outc, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), ReLU(),
-        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), act
+        ConvTranspose2d(outc, outc, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(outc, outc, (5, 5), padding=2), act
     )
 
     # - channel sizes
