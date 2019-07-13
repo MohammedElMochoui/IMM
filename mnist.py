@@ -263,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epochs",
                         dest="epochs",
                         help="Number of epochs.",
-                        default=50, type=int)
+                        default=25, type=int)
 
     parser.add_argument("-o", "--out-every",
                         dest="out_every",
