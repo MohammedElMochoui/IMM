@@ -283,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--batch-size",
                         dest="batch_size",
                         help="Batch size",
-                        default=128, type=int)
+                        default=64, type=int)
 
     parser.add_argument("--loss",
                         dest="loss",
