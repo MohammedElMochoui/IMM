@@ -81,9 +81,15 @@ def go(options):
 
     edge_encoder = Sequential(
         Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
+        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
+        Conv2d(3, edge_a, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_a, edge_b, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
+        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
+        Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
         Conv2d(edge_b, edge_c, (5, 5), padding=2), ReLU(),
         MaxPool2d((2, 2)),
         ptutil.Flatten(),
@@ -96,9 +102,15 @@ def go(options):
         ptutil.Reshape((edge_c, 32, 32)),
         Upsample(scale_factor=2, mode=upmode),
         ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_c, edge_b, (5, 5), padding=2), ReLU(),
         Upsample(scale_factor=2, mode=upmode),
-        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(), # note the padding
+        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_b, edge_a, (5, 5), padding=2), ReLU(), 
         Upsample(scale_factor=2, mode=upmode),
+        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), ReLU(),
+        ConvTranspose2d(edge_a, outc, (5, 5), padding=2), ReLU(),
         ConvTranspose2d(edge_a, outc, (5, 5), padding=2), act
     )
 
@@ -194,10 +206,9 @@ def go(options):
 
             instances_seen += edge.size(0)
 
-            tbw.add_scalar('score/kl', float(kl_loss.mean()), instances_seen)
+            tbw.add_scalar('score/kl', float((kl_loss.mean() + kl_loss_handbag.mean()) / 2), instances_seen)
             tbw.add_scalar('score/rec', float(rec_loss.mean()), instances_seen)
             tbw.add_scalar('score/loss', float(loss), instances_seen)
-            tbw.add_scalar('score/bits', float(loss / 784), instances_seen)
             
             torch.save(edge_encoder.state_dict(), './edge_encoder_vae.pt')
             torch.save(edge_decoder.state_dict(), './edge_decoder_vae.pt')
