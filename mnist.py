@@ -205,8 +205,8 @@ def go(options):
             if options.loss == 'xent':
                 rec_loss = binary_cross_entropy(out, edge, reduce=False).view(b, -1).sum(dim=1) + \
                 binary_cross_entropy(out_handbag, handbag, reduce=False).view(b, -1).sum(dim=1) + \
-                binary_cross_entropy(out, handbag, reduce=False).view(b, -1).sum(dim=1) + \
-                binary_cross_entropy(out_handbag, edge, reduce=False).view(b, -1).sum(dim=1) 
+               # binary_cross_entropy(out, handbag, reduce=False).view(b, -1).sum(dim=1) + \
+               # binary_cross_entropy(out_handbag, edge, reduce=False).view(b, -1).sum(dim=1) 
             else:
                 raise Exception('loss {} not recognized'.format(options.loss))
 
